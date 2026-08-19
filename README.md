@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PixelForge
 
-## Getting Started
+PixelForge turns 2–4 arbitrary-angle photographs of one object into a Minecraft structure:
 
-First, run the development server:
+1. Browser-side checks flag low-resolution, dark, overexposed, blurry, or duplicate views.
+2. A server-only Meshy API key starts a multi-image 3D reconstruction.
+3. The completed GLB is previewed in an orbitable Three.js viewer.
+4. The mesh is normalized, voxelized locally, matched to Minecraft blocks, and exported.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Outputs
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Sponge/WorldEdit `.schem`
+- Vanilla structure-block `.nbt`
+- Materials `.csv`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Both hollow-shell and flood-filled solid models are supported. Users can choose the longest edge, block palette, orientation, mirroring, and disconnected-island cleanup.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+Requirements: Node.js 20+ and a Meshy API key with Multi-Image to 3D access.
 
-To learn more about Next.js, take a look at the following resources:
+    npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Create `.env.local`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    MESHY_API_KEY=your_meshy_api_key
 
-## Deploy on Vercel
+Then run:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+    npm run dev
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000).
+
+## Architecture
+
+- `app/page.tsx`: capture, reconstruction, editing, and export workflow
+- `app/api/reconstruct/route.ts`: authenticated Meshy proxy, validation, rate limits, and polling
+- `components/model-preview.tsx`: normalized GLB preview
+- `lib/voxel-export.ts`: surface sampling, flood fill, cleanup, palette matching, and NBT writers
+
+The Meshy key never reaches the browser. Photos are sent as multipart uploads to the same-origin API and are not persisted by PixelForge. Reconstruction task IDs and recent settings are saved only in browser local storage.
+
+## Operational notes
+
+- The in-memory rate limiter is suitable for a single-instance deployment. Use Redis or an equivalent shared store when deploying across multiple instances.
+- Meshy asset URLs can expire. Recent projects retain task IDs and fetch fresh task output when resumed.
+- High resolutions are computationally expensive; voxelization runs in the browser and is capped at a 17-million-cell volume.
+- Add a real repository remote before exposing a repository link in the interface.
+
+## Validation
+
+    npm run lint
+    npm run build
+
+Mesh reconstruction uses the [Meshy Multi-Image to 3D API](https://docs.meshy.ai/en/api/multi-image-to-3d).
